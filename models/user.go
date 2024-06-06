@@ -18,3 +18,11 @@ func (u *User) GeneratePassword() string {
 	hash, _ := bcrypt.GenerateFromPassword([]byte(u.Password), 14)
 	return string(hash)
 }
+
+func (u *User) Promote() {
+	u.Role = "Editor"
+}
+
+func (u *User) Demote() {
+	u.Role = "Member"
+}

@@ -24,11 +24,27 @@ func Authentication() *jwt.GinJWTMiddleware {
 
 		IdentityKey: IdentityKey,
 
-		Authenticator: func(c *gin.Context) (interface{}, error) {
+		TokenLookup:   "header:Authorization",
+		TokenHeadName: "Bearer",
+
+		IdentityHandler: func(ctx *gin.Context) interface{} {
+			var user models.User
+			cliam := jwt.ExtractClaims(ctx)
+			id := cliam[IdentityKey]
+
+			db := config.GetDB()
+			if err := db.First(&user, uint(id.(float64))).Error; err != nil {
+				return nil
+			}
+
+			return user
+		},
+
+		Authenticator: func(ctx *gin.Context) (interface{}, error) {
 			var form login
 			var user models.User
 
-			if err := c.ShouldBindBodyWithJSON(&form); err != nil {
+			if err := ctx.ShouldBindBodyWithJSON(&form); err != nil {
 				return nil, jwt.ErrMissingLoginValues
 			}
 
@@ -51,8 +67,8 @@ func Authentication() *jwt.GinJWTMiddleware {
 			}
 			return jwt.MapClaims{}
 		},
-		Unauthorized: func(c *gin.Context, code int, message string) {
-			c.JSON(code, gin.H{
+		Unauthorized: func(ctx *gin.Context, code int, message string) {
+			ctx.JSON(code, gin.H{
 				"code":    code,
 				"message": message,
 			})

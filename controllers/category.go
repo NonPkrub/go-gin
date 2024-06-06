@@ -14,6 +14,7 @@ type Categories struct {
 }
 
 type categoryResponse struct {
+	ID      uint   `json:"id"`
 	Name    string `json:"name"`
 	Desc    string `json:"desc"`
 	Article []struct {
@@ -33,86 +34,93 @@ type updateCategory struct {
 }
 
 type allCategoriesResponse struct {
+	ID   uint   `json:"id"`
 	Name string `json:"name"`
 	Desc string `json:"desc"`
 }
 
-func (ca *Categories) FindAll(c *gin.Context) {
+func (ca *Categories) FindAll(ctx *gin.Context) {
 	var categories []models.Category
 	ca.DB.Order("id desc").Find(&categories)
 
 	var res []allCategoriesResponse
-	copier.Copy(&res, &categories)
-	c.JSON(http.StatusOK, gin.H{"categories": res})
+	if err := copier.Copy(&res, &categories); err != nil {
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"err ": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"categories": res})
 }
-func (ca *Categories) FindOne(c *gin.Context) {
-	category, err := ca.findCategoryByID(c)
+func (ca *Categories) FindOne(ctx *gin.Context) {
+	category, err := ca.findCategoryByID(ctx)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"err ": err.Error()})
+		ctx.JSON(http.StatusNotFound, gin.H{"err ": err.Error()})
 		return
 	}
 	var res categoryResponse
-	copier.Copy(&res, &category)
-	c.JSON(http.StatusOK, gin.H{"category": res})
+	if err := copier.Copy(&res, &category); err != nil {
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"err ": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"category": res})
 }
 
-func (ca *Categories) Create(c *gin.Context) {
+func (ca *Categories) Create(ctx *gin.Context) {
 	var form categoryRequest
-	if err := c.ShouldBind(&form); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"err ": err.Error()})
+	if err := ctx.ShouldBind(&form); err != nil {
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"err ": err.Error()})
 		return
 	}
 	var category models.Category
 	err := copier.Copy(&category, &form)
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"err ": err.Error()})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"err ": err.Error()})
 		return
 	}
 	if err := ca.DB.Create(&category).Error; err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"err ": err.Error()})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"err ": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"category": category})
+	ctx.JSON(http.StatusCreated, gin.H{"category": category})
 }
 
-func (ca *Categories) Update(c *gin.Context) {
+func (ca *Categories) Update(ctx *gin.Context) {
 	var form updateCategory
-	if err := c.ShouldBindJSON(&form); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"err ": err.Error()})
+	if err := ctx.ShouldBindJSON(&form); err != nil {
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"err ": err.Error()})
 		return
 	}
-	category, err := ca.findCategoryByID(c)
+	category, err := ca.findCategoryByID(ctx)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"err ": err.Error()})
+		ctx.JSON(http.StatusNotFound, gin.H{"err ": err.Error()})
 		return
 	}
 
 	if err := ca.DB.Model(&category).Updates(&form).Error; err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"err ": err.Error()})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"err ": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"category": category})
+	ctx.JSON(http.StatusOK, gin.H{"category": category})
 }
 
-func (ca *Categories) Delete(c *gin.Context) {
-	category, err := ca.findCategoryByID(c)
+func (ca *Categories) Delete(ctx *gin.Context) {
+	category, err := ca.findCategoryByID(ctx)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"err ": err.Error()})
+		ctx.JSON(http.StatusNotFound, gin.H{"err ": err.Error()})
 		return
 	}
 	if err := ca.DB.Unscoped().Delete(&category).Error; err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"err ": err.Error()})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"err ": err.Error()})
 		return
 	}
-	c.Status(http.StatusNoContent)
+	ctx.Status(http.StatusNoContent)
 }
 
-func (ca *Categories) findCategoryByID(c *gin.Context) (*models.Category, error) {
+func (ca *Categories) findCategoryByID(ctx *gin.Context) (*models.Category, error) {
 	var category models.Category
-	id := c.Param("id")
+	id := ctx.Param("id")
 
 	if err := ca.DB.Preload("Article").First(&category, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"err ": err.Error()})
+		ctx.JSON(http.StatusNotFound, gin.H{"err ": err.Error()})
 		return nil, err
 	}
 	return &category, nil

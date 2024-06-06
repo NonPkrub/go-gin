@@ -14,7 +14,7 @@ import (
 func Load() {
 	db := config.GetDB()
 
-	db.DropTableIfExists("articles", "categories", "migrations")
+	db.DropTableIfExists("users", "articles", "categories", "migrations")
 	migrations.Migrate()
 	log.Println("Creating categories...")
 
@@ -47,4 +47,35 @@ func Load() {
 		db.Create(&article)
 		articles = append(articles, article)
 	}
+	// Admin
+	log.Println("Creating categories...")
+	admin := models.User{
+		Email:    "admin@gmail.com",
+		Password: "passw0rd",
+		Name:     "Admin",
+		Avatar:   "https://i.pravatar.cc/100?",
+		Role:     "Admin",
+	}
+	admin.Password = admin.GeneratePassword()
+	db.Create(&admin)
+	//User
+	log.Println("Creating categories...")
+	numOfUser := 50
+	users := make([]models.User, 0, numOfUser)
+	userRole := [2]string{"Admin", "Member"}
+
+	for i := 1; i <= numOfUser; i++ {
+		user := models.User{
+			Name:     faker.Name(),
+			Email:    faker.Email(),
+			Password: "passw0rd",
+			Avatar:   "https://i.pravatar.cc/100?" + strconv.Itoa(i),
+			Role:     userRole[rand.Intn(2)],
+		}
+
+		user.Password = user.GeneratePassword()
+		db.Create(&user)
+		users = append(users, user)
+	}
+
 }

@@ -18,14 +18,14 @@ type pagingResult struct {
 }
 
 type pagination struct {
-	c     *gin.Context
+	ctx   *gin.Context
 	db    *gorm.DB
 	model interface{}
 }
 
 func (p *pagination) pageResource() *pagingResult {
-	page, _ := strconv.Atoi(p.c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(p.c.DefaultQuery("limit", "10"))
+	page, _ := strconv.Atoi(p.ctx.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(p.ctx.DefaultQuery("limit", "10"))
 
 	// var count int
 	// db.Model(model).Count(&count)
